@@ -1,5 +1,3 @@
-import time
-
 import torch
 import torchtext.vocab as Vocab
 import torch.utils.data as Data
@@ -7,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import collections
 import os
+import time
+from past.builtins import raw_input
 
 
 def load_vocab():
@@ -64,9 +64,8 @@ def preprocess_data(data, vocab, category):
     :param category: 类别索引
     :return: 数据特征feature,数据标签label
     """
-    # 规定输入句子的长度
-    # 只有一个句子则不改变
-    length = 300 if len(data) == 1 else len(data[0][1])
+    # 规定句子长度为200
+    length = 350
 
     def tokenized(x):
         """
@@ -200,7 +199,7 @@ def train(train_iter, val_iter, net, loss, optimizer, device, num_epochs):
     """
     # use cpu or gpu
     net = net.to(device)
-    print("training on ", device)
+    print("training on", device)
     for epoch in range(num_epochs):
         # 训练损失,训练准确数,批量数,训练样本数,一次迭代的开始时间
         train_loss_sum, train_acc_sum, batch_count, n, start = 0., 0., 0, 0, time.time()
@@ -233,88 +232,84 @@ def train(train_iter, val_iter, net, loss, optimizer, device, num_epochs):
               % (epoch + 1, train_loss_sum / batch_count, train_acc_sum / n, val_acc, time.time() - start))
 
 
-def model_save(net, optimizer, vocab, category, *args):
+def model_save(net, optimizer, vocab, category,
+               batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr,
+               name):
     """
-    保存模型和优化器参数,字典,类别词典
+    保存模型
     :param net: TextCNN模型
     :param optimizer: Adam优化器
     :param vocab: 字典
     :param category: 类别词典
-    :param args: batch_size(int),embed_size(int),num_channels(list),kernel_sizes(list),num_epochs(int),lr(float)
-    :return: 成功或失败(缺少参数,优化器类型不符合)
+    :param batch_size: 批量大小
+    :param embed_size: 词向量维度
+    :param num_channels: 输入通道大小
+    :param kernel_sizes: 卷积核宽度
+    :param num_epochs: 迭代轮数
+    :param lr: 学习率
+    :param name: 保存文件名
     """
-    # 缺少参数
-    if len(args) != 6:
-        print('lack parameters')
-        return False
-    # 优化器类型不符合
-    if not isinstance(optimizer, torch.optim.Adam):
-        print('not adam optimizer')
-        return False
-
     # 保存的根目录
     root = './model'
     if not os.path.exists(root):
         os.makedirs(root)
-
-    # 元素转换为字符串格式
-    args = [str(x) for x in args]
     # 保存路径
-    path = root + '/' + '-'.join(args) + '.pt'
+    path = root + '/' + name + '.pt'
+    # 保存为字典格式
     torch.save({'model': net.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'vocab': vocab,
-                'category': category},
+                'category': category,
+                'batch_size': batch_size,
+                'embed_size': embed_size,
+                'num_channels': num_channels,
+                'kernel_sizes': kernel_sizes,
+                'num_epochs': num_epochs,
+                'lr': lr},
                path)
-
-    # 保存成功
-    print('model and optimizer saved as %s' % path)
-    return True
+    # 打印保存信息
+    print('model saved as %s' % path)
 
 
-def model_load(path):
+def model_load(name):
     """
-    加载模型和优化器,字典,类别词典
-    :param path: 模型路径
-    :return: 包含模型,优化器等参数的字典
+    加载模型
+    :param name: 模型文件名
+    :return: 模型,字典,类别词典
     """
-    # 从模型文件名中提取参数
-    parameters = path.split('/')[-1][:-3].split('-')
+    # 保存的根目录
+    root = './model'
+    # 输入文件名
+    name += '.pt'
+    # 用户输入错误
+    if name not in os.listdir(root):
+        print('model目录下无该模型')
+        return None
 
-    # 加载模型和优化器
-    model_optimizer = torch.load(path)
-    if model_optimizer is not None:
+    # 加载模型
+    model = torch.load(root + '/' + name + '.pt')
+    if model is not None:
         # 载入字典和类别词典
-        vocab = model_optimizer['vocab']
-        category = model_optimizer['category']
-        # 实例化网络和优化器
-        net = TextCNN(len(vocab), int(parameters[1]), eval(parameters[2]), eval(parameters[3]))
-        optimizer = torch.optim.Adam(params=net.parameters())
+        vocab = model['vocab']
+        category = model['category']
+        # 实例化网络
+        net = TextCNN(len(vocab), model['embed_size'], model['num_channels'], model['kernel_sizes'])
         # 参数状态还原
-        net.load_state_dict(model_optimizer['model'])
-        optimizer.load_state_dict(model_optimizer['optimizer'])
+        net.load_state_dict(model['model'])
     else:
         # 加载失败
         print('model load failed')
         return None
 
-    # 组装成字典格式返回
     dic = {
         'net': net,
-        'optimizer': optimizer,
         'vocab': vocab,
         'category': category,
-        'batch_size': int(parameters[0]),
-        'embed_size': int(parameters[1]),
-        'num_channels': eval(parameters[2]),
-        'kernel_sizes': eval(parameters[3]),
-        'num_epochs': int(parameters[4]),
-        'lr': float(parameters[5])
     }
     return dic
 
 
-def main(batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr):
+def start_train(batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr):
     """
     训练入口
     :param batch_size: 批量大小
@@ -350,8 +345,79 @@ def main(batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr):
     # 训练
     train(train_iter, val_iter, net, loss, optimizer, device, num_epochs)
 
-    # 保存模型和优化器参数,字典,类别词典
-    model_save(net, optimizer, vocab, category, batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr)
+    # 是否进入测试
+    user_input = raw_input('是否输入进行测试[y/n]:')
+    if user_input in ['y', 'yes', '']:
+        # 读取用户输入
+        sentence = raw_input('输入测试语句[exit or 回车退出]:')
+        # 输入非空
+        while sentence != '':
+            if sentence == 'exit':
+                break
+            # 获取类别
+            label = get_label(net, vocab, category, sentence)
+            # 打印
+            print(label)
+            # 继续监听输入
+            sentence = raw_input('输入测试语句[exit or 回车退出]:')
+
+    # 是否保存模型
+    user_input = raw_input('是否保存模型[y/n]:')
+    if user_input in ['y', 'yes', '']:
+        # 请求保存文件名
+        name = raw_input('输入模型名(不带后缀):')
+        while name == '':
+            name = raw_input('重新输入:')
+        # 保存模型
+        model_save(net, optimizer, vocab, category,
+                   batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr,
+                   name)
+
+
+def into_train():
+    """
+    选择训练
+    """
+    print('设置训练参数:')
+    # 批量大小
+    batch_size = raw_input('批量大小(default:256):')
+    if batch_size == '':
+        batch_size = 256
+    else:
+        batch_size = int(batch_size)
+    # 词向量维度
+    embed_size = raw_input('词向量维度(default:50):')
+    if embed_size == '':
+        embed_size = 50
+    else:
+        embed_size = int(embed_size)
+    # 输出通道数
+    num_channels = raw_input('卷积层输出通道数(default:[30,30,30]):')
+    if num_channels == '':
+        num_channels = [30, 30, 30]
+    else:
+        num_channels = list(map(int, num_channels.strip('[').strip(']').split(',')))
+    # 卷积核宽度
+    kernel_sizes = raw_input('卷积核宽度(与通道数目保持相同,default:[2,3,4]):')
+    if kernel_sizes == '':
+        kernel_sizes = [2, 3, 4]
+    else:
+        kernel_sizes = list(map(int, kernel_sizes.strip('[').strip(']').split(',')))
+    # 迭代轮数
+    num_epochs = raw_input('迭代轮数(default:10):')
+    if num_epochs == '':
+        num_epochs = 10
+    else:
+        num_epochs = int(num_epochs)
+    # 学习率
+    lr = raw_input('学习率(default:0.01):')
+    if lr == '':
+        lr = 0.01
+    else:
+        lr = float(lr)
+
+    # 开始训练
+    start_train(batch_size, embed_size, num_channels, kernel_sizes, num_epochs, lr)
 
 
 def get_label(net, vocab, category, data):
@@ -372,12 +438,46 @@ def get_label(net, vocab, category, data):
     return {v: k for k, v in category.items()}[net(feature).argmax(dim=1).item()]
 
 
+def into_test(name):
+    """
+    根据用户输入句子返回类别
+    """
+    # 载入模型,默认载入init
+    name = name if name != '' else 'default'
+    model = model_load(name)
+
+    # 读取用户输入
+    user_input = raw_input('请输入[exit or 回车退出]:')
+    # 输入非空
+    while user_input != '':
+        if user_input == 'exit':
+            break
+        # 获取类别
+        label = get_label(model['net'], model['vocab'], model['category'], user_input)
+        # 打印
+        print(label)
+        # 继续监听输入
+        user_input = raw_input('请输入[exit or 回车退出]:')
+
+
+def ui():
+    """
+    与用户交互
+    """
+    welcome = 'train or test[exit or 回车退出]:'
+    user_input = raw_input(welcome)
+    while user_input != '':
+        # 退出
+        if user_input == 'exit':
+            break
+        # 选择训练模型
+        if user_input == 'train':
+            into_train()
+        # 选择功能测试
+        if user_input == 'test':
+            into_test(raw_input('输入要加载的模型名,默认加载default.pt:'))
+        user_input = raw_input(welcome)
+
+
 if __name__ == '__main__':
-    main(
-        batch_size=256,
-        embed_size=50,
-        num_channels=[30, 30, 30],
-        kernel_sizes=[2, 3, 4],
-        num_epochs=10,
-        lr=0.01
-    )
+    ui()
