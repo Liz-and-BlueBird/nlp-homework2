@@ -372,7 +372,6 @@ def get_label(net, vocab, category, data):
     return {v: k for k, v in category.items()}[net(feature).argmax(dim=1).item()]
 
 
-"""
 if __name__ == '__main__':
     main(
         batch_size=256,
@@ -382,4 +381,3 @@ if __name__ == '__main__':
         num_epochs=10,
         lr=0.01
     )
-"""
