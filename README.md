@@ -38,7 +38,7 @@ Adam优化算法在批量梯度下降（batch gradient descent）的基础上增
 
 # 4.数据集
 
-使用THUCNews的一个子集，该子集从https://github.com/gaussic/text-classification-cnn-rnn获取
+使用THUCNews的一个子集，子集获取地址为https://github.com/gaussic/text-classification-cnn-rnn
 
 包含四个文件：
 
@@ -63,15 +63,15 @@ cnews.test.txt（测试集）
 
 ## 5.1交互
 
-<img src="C:\Users\oldcat\Desktop\交互.png" alt="交互" style="zoom: 40%;" />
+<img src="images/交互.png" alt="交互" style="zoom: 40%;" />
 
 ## 5.2训练
 
-<img src="C:\Users\oldcat\Desktop\训练.png" alt="训练" style="zoom:50%;" />
+<img src="images/训练.png" alt="训练" style="zoom:50%;" />
 
 ## 5.3测试
 
-<img src="C:\Users\oldcat\Desktop\测试.png" alt="测试" style="zoom:50%;" />
+<img src="images/测试.png" alt="测试" style="zoom:50%;" />
 
 # 6.结果分析
 
