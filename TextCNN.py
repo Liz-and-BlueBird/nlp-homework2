@@ -392,7 +392,7 @@ def into_train():
     else:
         embed_size = int(embed_size)
     # 输出通道数
-    num_channels = raw_input('卷积层输出通道数(default:[30, 30,30,30]):')
+    num_channels = raw_input('卷积层输出通道数(default:[30,30,30,30]):')
     if num_channels == '':
         num_channels = [30, 30, 30, 30]
     else:
