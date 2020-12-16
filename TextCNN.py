@@ -16,7 +16,7 @@ def load_vocab():
     """
     with open('data/cnews.vocab.txt', 'rb') as vocab_file:
         # 分割字符组成列表
-        review = vocab_file.read().decode('utf-8').split('\n')
+        review = vocab_file.read().decode('utf-8').split('\r\n')
         # 封装成Counter类型
         counter = collections.Counter(review)
         # 转换成Vocab类型
@@ -64,8 +64,8 @@ def preprocess_data(data, vocab, category):
     :param category: 类别索引
     :return: 数据特征feature,数据标签label
     """
-    # 规定句子长度为200
-    length = 350
+    # 规定句子长度为输入句子中最长者的长度
+    length = len(max([x[1] for x in data]))
 
     def tokenized(x):
         """
@@ -287,7 +287,7 @@ def model_load(name):
         return None
 
     # 加载模型
-    model = torch.load(root + '/' + name + '.pt')
+    model = torch.load(root + '/' + name)
     if model is not None:
         # 载入字典和类别词典
         vocab = model['vocab']
@@ -392,21 +392,21 @@ def into_train():
     else:
         embed_size = int(embed_size)
     # 输出通道数
-    num_channels = raw_input('卷积层输出通道数(default:[30,30,30]):')
+    num_channels = raw_input('卷积层输出通道数(default:[30, 30,30,30]):')
     if num_channels == '':
-        num_channels = [30, 30, 30]
+        num_channels = [30, 30, 30, 30]
     else:
         num_channels = list(map(int, num_channels.strip('[').strip(']').split(',')))
     # 卷积核宽度
-    kernel_sizes = raw_input('卷积核宽度(与通道数目保持相同,default:[2,3,4]):')
+    kernel_sizes = raw_input('卷积核宽度(与通道数目保持相同,default:[1,2,3,4]):')
     if kernel_sizes == '':
-        kernel_sizes = [2, 3, 4]
+        kernel_sizes = [1, 2, 3, 4]
     else:
         kernel_sizes = list(map(int, kernel_sizes.strip('[').strip(']').split(',')))
     # 迭代轮数
-    num_epochs = raw_input('迭代轮数(default:10):')
+    num_epochs = raw_input('迭代轮数(default:5):')
     if num_epochs == '':
-        num_epochs = 10
+        num_epochs = 5
     else:
         num_epochs = int(num_epochs)
     # 学习率
