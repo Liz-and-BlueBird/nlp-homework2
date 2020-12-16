@@ -477,7 +477,3 @@ def ui():
         if user_input == 'test':
             into_test(raw_input('输入要加载的模型名,默认加载default.pt:'))
         user_input = raw_input(welcome)
-
-
-if __name__ == '__main__':
-    ui()
