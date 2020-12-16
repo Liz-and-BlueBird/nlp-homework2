@@ -438,26 +438,28 @@ def get_label(net, vocab, category, data):
     return {v: k for k, v in category.items()}[net(feature).argmax(dim=1).item()]
 
 
-def into_test(name):
+def into_test():
     """
     根据用户输入句子返回类别
     """
-    # 载入模型,默认载入init
+    # 载入模型,默认载入default
+    name = raw_input('输入要加载的模型名,默认加载default.pt:')
     name = name if name != '' else 'default'
     model = model_load(name)
-
-    # 读取用户输入
-    user_input = raw_input('请输入[exit or 回车退出]:')
-    # 输入非空
-    while user_input != '':
-        if user_input == 'exit':
-            break
-        # 获取类别
-        label = get_label(model['net'], model['vocab'], model['category'], user_input)
-        # 打印
-        print(label)
-        # 继续监听输入
+    # 模型载入成功
+    if model is not None:
+        # 读取用户输入
         user_input = raw_input('请输入[exit or 回车退出]:')
+        # 输入非空
+        while user_input != '':
+            if user_input == 'exit':
+                break
+            # 获取类别
+            label = get_label(model['net'], model['vocab'], model['category'], user_input)
+            # 打印
+            print(label)
+            # 继续监听输入
+            user_input = raw_input('请输入[exit or 回车退出]:')
 
 
 def ui():
@@ -475,5 +477,5 @@ def ui():
             into_train()
         # 选择功能测试
         if user_input == 'test':
-            into_test(raw_input('输入要加载的模型名,默认加载default.pt:'))
+            into_test()
         user_input = raw_input(welcome)
